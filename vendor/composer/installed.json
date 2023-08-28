@@ -204,6 +204,70 @@
             "install-path": "../leafs/auth"
         },
         {
+            "name": "leafs/cors",
+            "version": "v1.1.1",
+            "version_normalized": "1.1.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/leafsphp/cors.git",
+                "reference": "10934a7504879ecf9b6f7687926c22a3b5c02ce9"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/leafsphp/cors/zipball/10934a7504879ecf9b6f7687926c22a3b5c02ce9",
+                "reference": "10934a7504879ecf9b6f7687926c22a3b5c02ce9",
+                "shasum": ""
+            },
+            "require": {
+                "leafs/http": "*"
+            },
+            "time": "2022-07-25T22:09:52+00:00",
+            "type": "library",
+            "installation-source": "dist",
+            "autoload": {
+                "psr-4": {
+                    "Leaf\\Http\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Michael Darko",
+                    "email": "mickdd22@gmail.com",
+                    "homepage": "https://mychi.netlify.app",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Leaf PHP cors config",
+            "homepage": "https://leafphp.netlify.app/#/",
+            "keywords": [
+                "Cross Origin Resource Sharing",
+                "cors",
+                "framework",
+                "leaf",
+                "origin",
+                "php"
+            ],
+            "support": {
+                "issues": "https://github.com/leafsphp/cors/issues",
+                "source": "https://github.com/leafsphp/cors/tree/v1.1.1"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/leafsphp",
+                    "type": "github"
+                },
+                {
+                    "url": "https://opencollective.com/leaf",
+                    "type": "open_collective"
+                }
+            ],
+            "install-path": "../leafs/cors"
+        },
+        {
             "name": "leafs/date",
             "version": "v2.0",
             "version_normalized": "2.0.0.0",

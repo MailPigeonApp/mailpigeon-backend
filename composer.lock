@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "066d0bf8e12aee93b0ef80e20397edd0",
+    "content-hash": "e511e15b65aff6d243be050cb7c59488",
     "packages": [
         {
             "name": "graham-campbell/result-type",
@@ -199,6 +199,67 @@
                 }
             ],
             "time": "2023-05-21T15:16:48+00:00"
+        },
+        {
+            "name": "leafs/cors",
+            "version": "v1.1.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/leafsphp/cors.git",
+                "reference": "10934a7504879ecf9b6f7687926c22a3b5c02ce9"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/leafsphp/cors/zipball/10934a7504879ecf9b6f7687926c22a3b5c02ce9",
+                "reference": "10934a7504879ecf9b6f7687926c22a3b5c02ce9",
+                "shasum": ""
+            },
+            "require": {
+                "leafs/http": "*"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Leaf\\Http\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Michael Darko",
+                    "email": "mickdd22@gmail.com",
+                    "homepage": "https://mychi.netlify.app",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Leaf PHP cors config",
+            "homepage": "https://leafphp.netlify.app/#/",
+            "keywords": [
+                "Cross Origin Resource Sharing",
+                "cors",
+                "framework",
+                "leaf",
+                "origin",
+                "php"
+            ],
+            "support": {
+                "issues": "https://github.com/leafsphp/cors/issues",
+                "source": "https://github.com/leafsphp/cors/tree/v1.1.1"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/leafsphp",
+                    "type": "github"
+                },
+                {
+                    "url": "https://opencollective.com/leaf",
+                    "type": "open_collective"
+                }
+            ],
+            "time": "2022-07-25T22:09:52+00:00"
         },
         {
             "name": "leafs/date",

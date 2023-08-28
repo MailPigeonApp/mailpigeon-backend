@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => '__root__',
-        'pretty_version' => '1.0.0+no-version-set',
-        'version' => '1.0.0.0',
-        'reference' => NULL,
+        'pretty_version' => 'dev-main',
+        'version' => 'dev-main',
+        'reference' => 'd1bde46f261e683f8c01a6231bebc472eb663682',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -11,9 +11,9 @@
     ),
     'versions' => array(
         '__root__' => array(
-            'pretty_version' => '1.0.0+no-version-set',
-            'version' => '1.0.0.0',
-            'reference' => NULL,
+            'pretty_version' => 'dev-main',
+            'version' => 'dev-main',
+            'reference' => 'd1bde46f261e683f8c01a6231bebc472eb663682',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
@@ -43,6 +43,15 @@
             'reference' => '0f3cbd74cf1a4d851321909635aa224a4716438a',
             'type' => 'library',
             'install_path' => __DIR__ . '/../leafs/auth',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'leafs/cors' => array(
+            'pretty_version' => 'v1.1.1',
+            'version' => '1.1.1.0',
+            'reference' => '10934a7504879ecf9b6f7687926c22a3b5c02ce9',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../leafs/cors',
             'aliases' => array(),
             'dev_requirement' => false,
         ),
