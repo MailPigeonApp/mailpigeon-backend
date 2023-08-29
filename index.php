@@ -448,6 +448,63 @@ app()->group('/v1', function(){
 
 		});
 	});
+
+	app()->group('/analytics', function(){
+		app()->post('/dailySubmissions', function(){
+			$request = request()->get(['projectId']);
+
+			$analytics = db()
+				->select('submission', 'COUNT(*) as count, DATE_TRUNC(\'day\', "created_at") as day')
+				->where('"projectId"', $request['projectId'])
+				->where('"created_at"', '>=', date('Y-m-d', strtotime('-7 days')))
+				->groupBy('day')
+				->orderBy('day', 'desc')
+				// ->limit(7)
+				->fetchAll();
+
+			response()->json(
+				[
+					"analytics" => $analytics
+				]
+			);
+		});
+
+		app()->post('/weeklySubmissions', function(){
+			$request = request()->get(['projectId']);
+
+			$analytics = db()
+				->select('submission', 'COUNT(*) as count, DATE_TRUNC(\'week\', "created_at") as week')
+				->where('"projectId"', $request['projectId'])
+				->groupBy('week')
+				->orderBy('week', 'desc')
+				->limit(10)
+				->fetchAll();
+
+			response()->json(
+				[
+					"analytics" => $analytics
+				]
+			);
+		});
+
+		app()->post("/timeOfSubmissions", function(){
+			$request = request()->get(['projectId']);
+
+			$analytics = db()
+				->select('submission', 'date_part(\'hour\', created_at) AS hour, count(*) AS count')
+				->where('"projectId"', $request['projectId'])
+				->where('"created_at"', '>=', date('Y-m-d', strtotime('-7 days')))
+				->groupBy('hour')
+				->orderBy('hour', 'asc')
+				->fetchAll();
+
+			response()->json(
+				[
+					"analytics" => $analytics
+				]
+			);
+		});
+	});
 });
 
 app()->run();
