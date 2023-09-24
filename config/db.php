@@ -1,7 +1,13 @@
 <?php
+use Dotenv\Dotenv;
 
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__, '../.env');
-$dotenv->load();
+if(file_exists(__DIR__ . '../.env')){   
+    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__, '../.env');
+    $dotenv->load();
+}
+
+// $dotenv = Dotenv\Dotenv::createImmutable(__DIR__, '../.env');
+// $dotenv->load();
 
 db()->connect([
     'dbtype' => $_ENV['DB_TYPE'],
