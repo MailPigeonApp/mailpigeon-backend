@@ -23,8 +23,8 @@ app()->group('/v1', function(){
 			$user = auth()->login($credentials);
 	
 			if (!$user) {
-				$credentials = request()->get([ 'name', 'username' ,'email', 'avatar']);
-				$newUser = auth()->register($credentials, ['email', 'name']);
+				$credentials = request()->get([ 'name' ,'email', 'avatar']);
+				$newUser = auth()->register($credentials, ['email']);
 				response()->exit([
 					'status' => 'success',
 					'scope' => 'newUser',
