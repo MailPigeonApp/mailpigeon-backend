@@ -160,14 +160,62 @@ app()->group('/v1', function(){
 				->where('"projectId"', $request['id'])
 				->count();
 
+			$unreadCount = db()
+				->select('submission')
+				->where([
+					'"projectId"' => $request['id'],
+					'read' => 'false'
+					])
+				->count();
+
 			$project['fields'] = json_decode($project['fields'], true);
 
 			response()->json( [
-				"project" => $project + ["submissionCount" => $submissionCount]
+				"project" => $project + ["submissionCount" => $submissionCount] + ["unreadCount" => $unreadCount]
 			]);
 		});
 
 		app()->post('/getProjectSubmissions', function(){
+			$request = request()->get(['id']);
+			$page = request()->get('page');
+
+			$projectId = $request['id'];
+
+			$project = db()
+				->select('project')
+				->find($request['id']);
+
+			if(!$project) {
+				response()->exit(
+						["message" => "Project not found"]
+				);
+			}
+
+			$offset = $page * 10;
+
+			$submissionsQuery = db()
+				->query("SELECT * FROM submission WHERE \"projectId\" = ? ORDER BY created_at DESC LIMIT 10 OFFSET ?")
+				->bind($projectId, $offset)
+				->fetchAll();
+
+			// $submissions = db()
+			// 	->select('submission')
+			// 	->where('"projectId"', $request['id'])
+			// 	->orderBy('"created_at"', "desc")
+			// 	->limit(10)
+			// 	// ->offset($page * 10)
+			// 	->fetchAll();
+
+			$hasNextPage = count($submissionsQuery) == 10;
+
+			response()->json(
+				[
+					"submissions" => $submissionsQuery
+				]
+			);
+		});
+
+		app()->post('/getProjectSubmissionsForDownload', function(){
 			$request = request()->get(['id']);
 
 			$project = db()
@@ -184,8 +232,13 @@ app()->group('/v1', function(){
 				->select('submission')
 				->where('"projectId"', $request['id'])
 				->orderBy('"created_at"', "desc")
-				->limit(20)
 				->fetchAll();
+
+			$submissions = array_map(function($submission){
+				return json_decode($submission['data'], true);
+			}, $submissions);	
+
+
 
 			response()->json(
 				[
@@ -350,6 +403,7 @@ app()->group('/v1', function(){
 
 		app()->delete('/deleteSubmission', function(){
 			$id = request()->get('id');
+			$projectId = request()->get('projectId');
 			$submission = db()
 				->delete('"submission"')
 				->where(
@@ -362,90 +416,30 @@ app()->group('/v1', function(){
 					->find($id);
 			
 			if ($submissioncheck === false) {
+				$deletedCount = db()
+					->select("project", '"deleted_count"')
+					->where("id", $projectId)
+					->first();
+
+				$newCount = $deletedCount['deleted_count'] + 1;
+
+				db()
+					->update("project")
+					->params(["deleted_count" => $newCount])
+					->where("id", $projectId)
+					->execute();
+
+
 				response()->exit([
 					'status' => 'success',
 					'data' => 'Submission deleted successfully',
+					'deletedCount' => $deletedCount['deleted_count']
 				], 200, true);
 			}
 			response()->json([
 				'status' => 'failed',
 				'data' => 'Unable to delete submission',
 			], 500, false);
-		});
-
-		app()->post('/submit', function(){
-			$request = request()->body();
-			$bearer = Leaf\Http\Headers::get("Authorization");
-			$key = substr($bearer, 7);
-			// $auth = Leaf\Http\Headers::get("Authorization");
-
-			// $key = substr($auth, 6);
-
-			// $decoded = base64_decode($key);
-			// list($username,$password) = explode(":",$decoded);
-
-			$keyDetails = db()
-				->select('apikey')
-				->find($key);
-
-			if (!$keyDetails) {
-				response()->exit(
-					[
-						"message" => "Invalid API key"
-					], 401
-				);
-			}
-
-			$fields = db()
-				->select('project', 'fields')
-				->find($keyDetails["projectId"]);
-
-			$decodedFields = json_decode($fields['fields'], true);
-
-			$required = [];
-			$empty = [];
-
-			foreach ($decodedFields as $field) {
-				if ($field['required'] && !isset($request[$field["name"]])) {
-					// $fieldName = $field["name"];
-					$required[] = "Field '" . $field["name"] . "' is required";
-					continue;
-				}
-				if (gettype($request[$field['name']]) != $field['type']) {
-					$empty[] = "Field '" . $field["name"] . "' is not of type " . $field['type'];
-				}
-			}
-
-			if(count($empty) > 0) {
-				response()->exit(
-					$empty, 400
-				);
-			};
-
-			if(count($required) > 0) {
-				response()->exit(
-						$required, 400
-				);
-			};
-
-			db()
-				->insert('submission')
-				->params(
-					[
-						'"projectId"' => $keyDetails["projectId"],
-						'"userId"' => $keyDetails["userId"],
-						"data" => json_encode($request)
-					]
-				)
-				->execute();
-			
-
-			response()->json(
-				[
-					"message" => "Submission successful"
-				], 201, true
-			);
-
 		});
 	});
 
