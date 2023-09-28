@@ -10,6 +10,8 @@ app()->cors();
 
 // auth()->config("USE_UUID", UUID::v4());
 auth()->config("AUTH_NO_PASS", false);
+auth()->config("SESSION_ON_REGISTER", false);
+
 
 app()->get('/', function () {
 	response()->page('./welcome.html');
@@ -25,8 +27,13 @@ app()->group('/v1', function(){
 	
 			if (!$user) {
 				$credentials = request()->get([ 'name' ,'email', 'avatar']);
-				$newUser = auth()->register($credentials, ['email']);
-				If (!$newUser) {
+				$newUser = auth()->register([
+					'name' => $credentials['name'],
+					'email' => $credentials['email'],
+					'avatar' => $credentials['avatar'] ?: ""
+					// 'password' => $secret
+				], ['email']);
+				if (!$newUser) {
 					response()->exit(auth()->errors());
 				  }
 				response()->exit([
