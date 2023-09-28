@@ -19,6 +19,10 @@ app()->get('/', function () {
 	response()->page('./welcome.html');
 });
 
+app()->set404(function () {
+	response()->page('./404.html');
+  });
+
 app()->group('/v1', function(){
 	
 	app()->group('/auth', function(){
