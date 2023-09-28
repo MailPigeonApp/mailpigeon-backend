@@ -11,6 +11,8 @@ app()->cors();
 // auth()->config("USE_UUID", UUID::v4());
 auth()->config("AUTH_NO_PASS", false);
 auth()->config("SESSION_ON_REGISTER", false);
+auth()->config("HIDE_ID", false);
+
 
 
 app()->get('/', function () {
@@ -35,11 +37,14 @@ app()->group('/v1', function(){
 				], ['email']);
 				if (!$newUser) {
 					response()->exit(auth()->errors());
-				  }
+				}
+
+				$decodedToken = Authentication::validate($newUser['token'], $secret);
+
 				response()->exit([
 					'status' => 'success',
 					'scope' => 'newUser',
-					'data' => $newUser
+					'data' => $newUser 
 				], 201);
 			}
 	
