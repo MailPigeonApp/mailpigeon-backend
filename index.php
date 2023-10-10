@@ -350,20 +350,20 @@ app()->group('/v1', function(){
 			$id = request()->get('id');
 
 			db()
-				->delete('project')
-				->where('id', $id)
+				->delete('submission')
+				->where('"projectId"', $id)
 				->execute();
 
 			db()
 				->delete('apikey')
 				->where('"projectId"', $id)
 				->execute();
-
+				
 			db()
-				->delete('submission')
-				->where('"projectId"', $id)
+				->delete('project')
+				->where('id', $id)
 				->execute();
-			
+
 			response()->json(
 				[
 					"message" => "Project deleted successfully"
