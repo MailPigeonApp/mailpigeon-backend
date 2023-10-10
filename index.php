@@ -10,6 +10,7 @@ app()->cors();
 
 // auth()->config("USE_UUID", UUID::v4());
 auth()->config("AUTH_NO_PASS", false);
+auth()->config("PASSWORD_VERIFY", false);
 auth()->config("SESSION_ON_REGISTER", false);
 auth()->config("HIDE_ID", false);
 
@@ -32,24 +33,23 @@ app()->group('/v1', function(){
 			$user = auth()->login($credentials);
 	
 			if (!$user) {
-				$credentials = request()->get([ 'name' ,'email', 'avatar']);
-				$newUser = auth()->register([
-					'name' => $credentials['name'],
-					'email' => $credentials['email'],
-					'avatar' => $credentials['avatar'] ?: ""
-					// 'password' => $secret
+				$registerCredentials = request()->get([ 'name' ,'email', 'avatar']);
+				auth()->register([
+					'name' => $registerCredentials['name'],
+					'email' => $registerCredentials['email'],
+					'avatar' => $registerCredentials['avatar'] ?: ""
 				], ['email']);
-				if (!$newUser) {
-					response()->exit(auth()->errors());
-				}
-
-				$decodedToken = Authentication::validate($newUser['token'], $secret);
-
+				$newUser = auth()->login($credentials);
 				response()->exit([
 					'status' => 'success',
 					'scope' => 'newUser',
 					'data' => $newUser 
 				], 201);
+
+				// if (!$newUser) {
+				// 	response()->exit(auth()->errors());
+				// }
+
 			}
 	
 			$decodedToken = Authentication::validate($user['token'], $secret);
