@@ -66,7 +66,7 @@ app()->group('/v1', function(){
 						->fetchAll();
 				
 			$keys = db()
-				->select('apikey', '"id", "name"')
+				->select('apikey', '"id", "name", "projectId"')
 				->where('"userId"', $decodedToken->user_id)
 				->orderBy('"created_at"', "desc")
 				->fetchAll();
