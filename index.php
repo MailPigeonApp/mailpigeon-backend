@@ -99,6 +99,47 @@ app()->group('/v1', function(){
 				]
 			);
 		});
+
+		app()->delete("/deleteUser", function(){
+			$id = request()->get('id');
+
+			db()
+				->delete('submission')
+				->where('"userId"', $id)
+				->execute();
+
+			db()
+				->delete('apikey')
+				->where('"userId"', $id)
+				->execute();
+
+			db()
+				->delete('project')
+				->where('"ownerId"', $id)
+				->execute();
+
+			db()
+				->delete('users')
+				->where('id', $id)
+				->execute();
+
+			$user = db()->select("users")->find($id);
+
+			if ($user) {
+				response()->exit([
+					'status' => 'failed',
+					'data' => 'Unable to delete user',
+				], 500, false);
+			}
+
+			response()->json(
+				[
+					"message" => "User deleted successfully"
+				], 200, true
+			);
+		});
+
+		
 	});
 
 	app()->group('/keys', function(){
@@ -150,6 +191,22 @@ app()->group('/v1', function(){
 
 
 			response()->json($user);
+		});
+
+		app()->post('/completeWalkthrough', function(){
+			$data = request()->get(['has_completed_walkthrough']);
+			$user = auth()->update($data);
+
+			if (!$user) {
+				$errors = auth()->errors();
+				// handle errors
+			}
+			
+			response()->json(
+				[
+					"message" => "Walkthrough completed successfully"
+				], 200, true
+			);
 		});
 	});
 
