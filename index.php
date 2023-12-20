@@ -10,7 +10,6 @@ app()->cors();
 
 // auth()->config("USE_UUID", UUID::v4());
 auth()->config("AUTH_NO_PASS", false);
-auth()->config("PASSWORD_VERIFY", false);
 auth()->config("SESSION_ON_REGISTER", false);
 auth()->config("HIDE_ID", false);
 
@@ -27,7 +26,49 @@ app()->set404(function () {
 app()->group('/v1', function(){
 	
 	app()->group('/auth', function(){
+		app()->post('/login', function(){
+			$user = auth()->login(request()->get(['email', 'password']));
+
+			if (!$user) {
+				response()->exit(auth()->errors());
+			} else {
+				$userProjects = db()
+						->select('project', '"id", "name"')
+						->where('"ownerId"', $user['user']['id'])
+						->orderBy('"updated_at"', "desc")
+						->limit(20)
+						->fetchAll();
+				
+				$keys = db()
+					->select('apikey', '"id", "name", "projectId"')
+					->where('"userId"', $user['user']['id'])
+					->orderBy('"created_at"', "desc")
+					->fetchAll();
+
+				response()->json([
+					'status' => 'success',
+					'scope' => 'existingUser',
+					'data' => $user + ['projects' => $userProjects] + ['keys' => $keys]
+				]);
+			}
+		});
+
+		app()->post('/register', function(){
+			$user = auth()->register(request()->get(['name', 'email', 'password']), ['email']);
+
+			if (!$user) {
+				response()->exit(auth()->errors());
+			} else {
+				response ()->json([
+					'status' => 'success',
+					'scope' => 'newUser',
+					'data' => $user + ['projects' => []] + ['keys' => []]
+				]);
+			}
+		});
+
 		app()->post('/continueWithGoogle', function(){
+			auth()->config("PASSWORD_VERIFY", false);
 			$secret = '@_leaf$0Secret!';
 			$credentials = request()->get(['email']);
 			$user = auth()->login($credentials);

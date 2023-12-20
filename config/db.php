@@ -1,13 +1,13 @@
 <?php
-use Dotenv\Dotenv;
+// use Dotenv\Dotenv;
 
-if(file_exists(__DIR__ . '../.env')){   
-    $dotenv = Dotenv\Dotenv::createImmutable(__DIR__, '../.env');
-    $dotenv->load();
-}
+// if(file_exists(__DIR__ . '../.env')){   
+//     $dotenv = Dotenv\Dotenv::createImmutable(__DIR__, '../.env.staging');
+//     $dotenv->load();
+// }
 
-// $dotenv = Dotenv\Dotenv::createImmutable(__DIR__, '../.env');
-// $dotenv->load();
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__, '../.env');
+$dotenv->load();
 
 db()->connect([
     'dbtype' => $_ENV['DB_TYPE'],

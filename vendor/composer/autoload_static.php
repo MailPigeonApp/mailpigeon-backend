@@ -70,8 +70,8 @@ class ComposerStaticInitb543438db01f4baca46ba76c2ae66074
         ),
         'Leaf\\Http\\' => 
         array (
-            0 => __DIR__ . '/..' . '/leafs/http/src',
-            1 => __DIR__ . '/..' . '/leafs/cors/src',
+            0 => __DIR__ . '/..' . '/leafs/cors/src',
+            1 => __DIR__ . '/..' . '/leafs/http/src',
         ),
         'Leaf\\Helpers\\' => 
         array (
