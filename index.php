@@ -273,11 +273,17 @@ app()->group('/v1', function(){
 				);
 			}
 
+			$ativatedIntegrations = db()
+				->select('project', 'active_integrations')
+				->find($request['id']);
+
+
 			$submissionCount = db()
 				->select('submission')
 				->where('"projectId"', $request['id'])
 				->count();
 
+			// TODO: make the submissions one call and get the count from there 
 			$unreadCount = db()
 				->select('submission')
 				->where([
@@ -453,6 +459,11 @@ app()->group('/v1', function(){
 				->execute();
 
 			db()
+				->delete('integrations')
+				->where('"projectId"', $id)
+				->execute();
+
+			db()
 				->delete('apikey')
 				->where('"projectId"', $id)
 				->execute();
@@ -467,6 +478,19 @@ app()->group('/v1', function(){
 					"message" => "Project deleted successfully"
 				], 200, true
 			);
+		});
+
+		app()->post('/getProjectIntegrations', function(){
+			$request = request()->get(['id']);
+
+			$integrations = db()
+				->select('integrations')
+				->where('"projectId"', $request['id'])
+				->fetchAll();
+
+			response()->json( [
+				"integrations" => $integrations
+			]);
 		});
 	});
 
@@ -615,6 +639,233 @@ app()->group('/v1', function(){
 					"analytics" => $analytics
 				]
 			);
+		});
+	});
+
+	app()->group('/integrations', function(){
+		app()->get('/', function(){
+			$integrations = db()
+				->select('integrations')
+				->fetchAll();
+
+			response()->json($integrations);
+		});
+
+		app()->post('/createIntegration', function(){
+			$request = request()->get(['name', 'type', 'projectId', 'userId']);
+
+			// Check if user has turned off the integration
+
+			$disabledCheck = db()
+				->select('integrations')
+				->where('"projectId"', $request['projectId'])
+				->where('"type"', $request['type'])
+				->where('"userId"', $request['userId'])
+				->fetchAll();
+
+			if ($disabledCheck) {
+				// Enable project and return success
+
+				db()
+					->query('UPDATE project SET active_integrations = array_append(active_integrations, ?) WHERE id = ?')
+					->bind($request['type'], $request['projectId'])
+					->execute();
+
+				response()->exit([
+					'status' => 'success',
+					'message' => 'Integration enabled successfully',
+					"integrationId" => $disabledCheck[0]['id']
+				], 200, true);
+			}
+
+			$integration = db()
+				->insert('integrations')
+				->params(
+					[
+						"name" => $request['name'],
+						"type" => $request['type'],
+						"data" => json_encode([]),
+						'"projectId"' => $request['projectId'],
+						'"userId"' => $request['userId']
+					]
+				)
+				->execute();
+				
+			$project = db()
+				->select("project", "active_integrations")
+				->find($request['projectId']);
+				
+				if (!$project) {
+					response()->exit([
+						'status' => 'failed',
+						'data' => 'Project not found',
+					], 500, false);
+				}
+
+			$activeIntegrations = $project['active_integrations'];
+			$activeIntegrations = trim($activeIntegrations, "{}");
+			$activeIntegrationsArray = explode(",", $activeIntegrations);
+
+			if (in_array($request['type'], $activeIntegrationsArray)) {
+				response()->exit([
+					'status' => 'failed',
+					'data' => ucfirst($request['type']). ' integration already exists',
+				], 500, false);
+			} else {
+				db()
+					->query('UPDATE project SET active_integrations = array_append(active_integrations, ?) WHERE id = ?')
+					->bind($request['type'], $request['projectId'])
+					->execute();
+			}
+
+			$lastId = db()
+				->select('integrations', 'id')
+				->where('"userId"', $request['userId'])
+				->orderBy("created_at", "desc")
+				->limit(1)
+				->fetchAll()[0]['id'];
+
+			response()->json(
+				[
+					"message" => "Integration created successfully",
+					"integrationId" => $lastId
+				], 201, true
+			);
+		});
+
+		app()->post('/registerIntegration', function(){
+			$request = request()->get(['id', 'data']);
+
+			$integration = db()
+				->update('integrations')
+				->params(
+					[
+						"data" => json_encode($request['data'])
+					]
+				)
+				->where('id', $request['id'])
+				->execute();
+
+			if (!$integration) {
+				response()->exit([
+					'status' => 'failed',
+					'data' => 'Unable to register integration',
+				], 500, false);
+			}
+
+			response()->json(
+				[
+					"message" => "Integration registered successfully"
+				], 200, true
+			);
+		});
+
+		app()->get('/getIntegration', function(){
+			$request = request()->get(['id']);
+
+			$integration = db()
+				->select('integrations')
+				->find($request['id']);
+
+			if(!$integration) {
+				response()->exit(
+						["message" => "Integration not found"]
+				);
+			}
+
+			response()->json( [
+				"integration" => $integration
+			]);
+		});
+
+		app()->post('/disableIntegration', function(){
+			$request = request()->get(['id', 'projectId', 'type']);
+
+			// Get project's active integrations
+			$project = db()
+				->select("project", "active_integrations")
+				->find($request['projectId']);
+				
+				if (!$project) {
+					response()->exit([
+						'status' => 'failed',
+						'data' => 'Project not found',
+					], 500, false);
+				}
+
+			$activeIntegrations = $project['active_integrations'];
+			$activeIntegrations = trim($activeIntegrations, "{}");
+			$activeIntegrationsArray = explode(",", $activeIntegrations);
+
+			if (($key = array_search($request['type'], $activeIntegrationsArray)) !== false) {
+				unset($activeIntegrationsArray[$key]);
+			}
+
+			$activeIntegrations = "{" . implode(",", $activeIntegrationsArray) . "}";
+
+			db()
+				->update("project")
+				->params(["active_integrations" => $activeIntegrations])
+				->where("id", $request['projectId'])
+				->execute();
+
+			// Check if integration exists on the project
+			response()->json(
+				[
+					"message" => "Integration disabled successfully"
+				], 200, true
+			);
+		});
+
+		app()->delete('/deleteIntegration', function(){
+			$id = request()->get('id');
+			$projectId = request()->get('projectId');
+			$type = request()->get('type');
+
+			$integration = db()
+				->delete('"integrations"')
+				->where(
+					'id', $id,
+					)
+				->execute();
+
+			$integrationcheck = db()
+					->select('"integrations"')
+					->find($id);
+			
+			if ($integrationcheck === false) {
+				$project = db()
+					->select("project", "active_integrations")
+					->find($projectId);
+					
+					if (!$project) {
+						response()->exit([
+							'status' => 'failed',
+							'data' => 'Project not found',
+						], 500, false);
+					}
+
+				$activeIntegrations = $project['active_integrations'];
+				$activeIntegrations = trim($activeIntegrations, "{}");
+				$activeIntegrationsArray = explode(",", $activeIntegrations);
+
+				if (($key = array_search($type, $activeIntegrationsArray)) !== false) {
+					unset($activeIntegrationsArray[$key]);
+				}
+
+				$activeIntegrations = "{" . implode(",", $activeIntegrationsArray) . "}";
+
+				db()
+					->update("project")
+					->params(["active_integrations" => $activeIntegrations])
+					->where("id", $projectId)
+					->execute();
+
+				response()->exit([
+					'status' => 'success',
+					'data' => 'Integration deleted successfully',
+				], 200, true);
+			}
 		});
 	});
 });
