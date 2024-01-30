@@ -736,6 +736,17 @@ app()->group('/v1', function(){
 		app()->post('/registerIntegration', function(){
 			$request = request()->get(['id', 'data']);
 
+			$integrationCheck = db()
+				->select('integrations')
+				->find($request['id']);
+
+			if (!$integrationCheck) {
+				response()->exit([
+					'status' => 'failed',
+					'data' => 'Integration not found',
+				], 500, false);
+			}
+
 			$integration = db()
 				->update('integrations')
 				->params(
