@@ -36,6 +36,7 @@ RUN mkdir -p  /app
 WORKDIR /app
 COPY . .
 COPY --from=base /var/www/html/vendor /app/vendor
+COPY --from=base /var/www/html/docker/php.ini /usr/local/etc/php/php.ini
 
 # Note: We run "production" for Mix and "build" for Vite
 RUN if [ -f "vite.config.js" ]; then \

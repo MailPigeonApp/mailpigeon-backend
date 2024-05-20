@@ -13,8 +13,6 @@ auth()->config("AUTH_NO_PASS", false);
 auth()->config("SESSION_ON_REGISTER", false);
 auth()->config("HIDE_ID", false);
 
-
-
 app()->get('/', function () {
 	response()->page('./welcome.html');
 });
@@ -22,6 +20,442 @@ app()->get('/', function () {
 app()->set404(function () {
 	response()->page('./404.html');
   });
+
+app()->group('/forms', function() {
+	app()->group('/v1', function() {
+		app()->group('/auth', function() {
+			app()->post('/login', function(){
+				$user = auth()->login(request()->get(['email', 'password']));
+	
+				if (!$user) {
+					response()->exit(auth()->errors());
+				} else {
+					$userProjects = db()
+							->select('project', '"id", "name"')
+							->where('"ownerId"', $user['user']['id'])
+							->orderBy('"updated_at"', "desc")
+							->limit(20)
+							->fetchAll();
+					
+					$keys = db()
+						->select('apikey', '"id", "name", "projectId"')
+						->where('"userId"', $user['user']['id'])
+						->orderBy('"created_at"', "desc")
+						->fetchAll();
+
+					$forms = db()
+						->select('form', '"id", "title", "ref", "created_at", "updated_at"')
+						->where('"user_id"', $user['user']['id'])
+						->orderBy('"created_at"', "desc")
+						->fetchAll();
+	
+					response()->json([
+						'status' => 'success',
+						'scope' => 'existingUser',
+						'data' => $user + ['keys' => $keys] + ['forms' => $forms]
+					]);
+				}
+			});
+
+			app()->post('/register', function(){
+				$request = request()->get(['name', 'email', 'password']);
+
+				$user = auth()->register($request, ['email']);
+	
+				$errors = auth()->errors();
+	
+				if ($errors) {
+					response()->exit($errors);
+				} else {
+					$newUser = auth()->login([
+						'email' => $request['email'],
+						'password' => $request['password']
+					]);
+	
+					response ()->json([
+						'status' => 'success',
+						'scope' => 'newUser',
+						'data' => $newUser + ['projects' => []] + ['keys' => []]
+					]);
+				}
+			});
+
+			app()->post('/continueWithGoogle', function(){
+				auth()->config("PASSWORD_VERIFY", false);
+				$secret = '@_leaf$0Secret!';
+				$credentials = request()->get(['email']);
+				$user = auth()->login($credentials);
+		
+				if (!$user) {
+					$registerCredentials = request()->get([ 'name' ,'email', 'avatar']);
+					auth()->register([
+						'name' => $registerCredentials['name'],
+						'email' => $registerCredentials['email'],
+						'avatar' => $registerCredentials['avatar'] ?: ""
+					], ['email']);
+					$newUser = auth()->login($credentials);
+					response()->exit([
+						'status' => 'success',
+						'scope' => 'newUser',
+						'data' => $newUser 
+					], 201);
+	
+					// if (!$newUser) {
+					// 	response()->exit(auth()->errors());
+					// }
+	
+				}
+		
+				$decodedToken = Authentication::validate($user['token'], $secret);
+		
+				if (!$decodedToken) {
+					$errors = Authentication::errors();
+				};
+					
+				$keys = db()
+					->select('apikey', '"id", "name", "projectId"')
+					->where('"userId"', $decodedToken->user_id)
+					->orderBy('"created_at"', "desc")
+					->fetchAll();
+
+				$forms = db()
+					->select('form', '"id", "title", "ref", "created_at", "updated_at"')
+					->where('"user_id"', $decodedToken->user_id)
+					->orderBy('"created_at"', "desc")
+					->fetchAll();
+		
+				response()->json([
+					'status' => 'success',
+					'scope' => 'existingUser',
+					'data' => $user + ['keys' => $keys] + ['forms' => $forms]
+				]);
+			});
+
+			app()->post('/checkEmail', function() {
+				$email = request()->get('email');
+	
+				if (!$email) {
+					response()->exit([
+						'status' => 'failed',
+						'exists' => false,
+						'meta' => 'Email is required'
+					], 400, false);
+				}
+	
+				$user = db()
+					->select('users')
+					->where('email', $email)
+					->first();
+	
+				if (!$user) {
+					response()->exit([
+						'status' => 'failed',
+						'exits' => false,
+						'meta' => 'User not found'
+					], 404, false);
+				}
+	
+				if ($user['password'] === null) {
+					response()->exit([
+						'status' => 'success',
+						'exists' => true,
+						'meta' => 'Use Google to login'
+					], 200, null);
+				}
+	
+				response()->exit([
+					'status' => 'success',
+					'exists' => true,
+					'meta' => $user['name']
+				], 200, null);
+			});
+		});
+
+		app()->group('/user', function() {
+			app()->post('/forms', function() {
+				$id = request()->get('id');
+
+				$forms = db()
+					->select('form', '"id", "title", "created_at", "updated_at"')
+					->where('user_id', $id)
+					->orderBy('created_at', 'desc')
+					->fetchAll();
+
+				response()->json($forms);
+			});
+		});
+
+		app()->group('/form', function(){
+			app()->get('/', function() {
+				$forms = db()
+					->select('form')
+					->fetchAll();
+	
+				response()->json($forms);
+			});
+
+			app()->post('/', function() {
+				$id = request()->get('id');
+
+				$form = db()
+					->select('form')
+					->find($id);
+
+				if (!$form) {
+					response()->exit([
+						'status' => 'failed',
+						'data' => 'Form not found',
+					], 500, false);
+				}
+
+				$settings = db()
+					->select('settings')
+					->where('"form_id"', $form['id'])
+					->fetchAll();
+	
+				response()->json([
+					"form" => $form + ["settings" => $settings[0]]
+				]);
+			});
+
+			app()->post('/getForm', function() {
+				$request = request()->get(['id']);
+
+				$form = db()
+					->select('form')
+					->find($request['id']);
+
+				if(!$form) {
+					response()->exit(
+							["message" => "Form not found"]
+					);
+				}
+
+				$settings = db()
+					->select('settings')
+					->where('"form_id"', $form['id'])
+					->fetchAll();
+
+				if($form['fields'] == "[]") {
+					response()->exit([
+						"message" => "Form has no fields"
+					]);
+				};
+
+				response()->json( [
+					"form" => $form + ["settings" => $settings[0]]
+				]);
+			});
+
+			app()->post('/create', function(){
+				$request = request()->get(['title', 'user_id', 'ref'], false);
+
+				$form = db()
+					->insert('form')
+					->params(
+						[
+							"title" => $request['title'],
+							"user_id" => $request['user_id'],
+							"ref" => $request['ref'],
+							"fields" => json_encode([])
+						]
+					)
+					->execute();
+
+				$lastId = db()
+					->select('form', 'id')
+					->where('"user_id"', $request['user_id'])
+					->orderBy("created_at", "desc")
+					->limit(1)
+					->fetchAll()[0]['id'];
+
+				db()
+					->insert('settings')
+					->params([
+						"form_id" => $lastId,
+					])
+					->execute();
+
+				response()->json(
+					[
+						"message" => "Form created successfully",
+						"formId" => $lastId
+					], 201, true
+				);
+
+
+			});
+
+			app()->post('/updateWelcomeScreen', function() {
+				$request = request()->get(['formId', 'welcome'], false);
+
+				db()
+					->update('form')
+					->params([
+						"welcome_screen" => json_encode($request['welcome'])
+					])
+					->where('id', $request['formId'])
+					->execute();
+
+				response()->json(
+					[
+						"message" => "Welcome screen updated successfully"
+					], 200, true
+				);
+			});
+
+			app()->post('/updateThankYouScreen', function() {
+				$request = request()->get(['formId', 'thank_you'], false);
+
+				db()
+					->update('form')
+					->params([
+						"thankyou_screen" => json_encode($request['thank_you'])
+					])
+					->where('id', $request['formId'])
+					->execute();
+
+				response()->json(
+					[
+						"message" => "Thank you screen updated successfully"
+					], 200, true
+				);
+			});
+
+			app()->post('/updateFields', function() {
+				$request = request()->get(['formId', 'fields', 'welcome', 'thank_you'], false);
+					
+				$fields = db()
+						->update('form')
+						->params([
+							"fields" => json_encode($request['fields'])
+						])
+						->where('id', $request['formId'])
+						->execute();
+
+							
+				response()->json(
+					[
+						"message" => "Fields updated successfully"
+					], 200, true
+				);
+			});
+
+			app()->post('/publish', function(){
+				$id = request()->get('id');
+
+				db()
+					->update('settings')
+					->params([
+						"is_public" => true
+					])
+					->where('form_id', $id)
+					->execute();
+
+				response()->json(
+					[
+						"message" => "Form published successfully"
+					], 200, true
+				);
+			});
+
+			app()->delete('/deleteForm', function(){
+				$id = request()->get('id');
+
+				db()
+					->delete('form')
+					->where('id', $id)
+					->execute();
+
+				response()->json(
+					[
+						"message" => "Form deleted successfully"
+					], 200, true
+				);
+			});
+		});
+
+		app()->group('/response', function(){
+			app()->post('/', function() {
+				$id = request()->get('id');
+
+				$formCount= db()
+					->select('response', '"increment"')
+					->where('form_id', $id)
+					->orderBy('created_at', 'desc')
+					->limit(1)
+					->fetchAll()[0]['increment'] ?? 0;
+
+				$response = db()
+						->query('SELECT * FROM response WHERE form_id = ? ORDER BY created_at DESC LIMIT 10 OFFSET ?')
+						->bind($id, 0)
+						->fetchAll();
+
+				$form = db()
+						->select('form', '"fields"')
+						->find($id);
+
+				response()->json([
+					"responses" => $response,
+					"fields" => json_decode($form["fields"]),
+					"count" => $formCount
+				]);
+			});
+
+			app()->post('/submit', function() {
+				$request = request()->get(['formId', 'answers']);
+
+				$form = db()
+					->select('form', '"id"')
+					->find($request['formId']);
+
+				if (!$form) {
+					response()->exit([
+						'status' => 'failed',
+						'data' => 'Form not found',
+					], 500, false);
+				}
+
+				$responseCount = db()
+					->select('response')
+					->where('form_id', $request['formId'])
+					->count();
+
+				db()
+					->insert('response')
+					->params(
+						[
+							"form_id" => $request['formId'],
+							"data" => json_encode($request['answers']),
+							'increment' => $responseCount + 1
+						]
+					)
+					->execute();
+
+				response()->json(
+					[
+						"message" => "Response submitted successfully"
+					], 201, true
+				);
+			});
+
+			app()->delete('/', function() {
+				$id = request()->get('id');
+
+				db()
+					->delete('response')
+					->where('id', $id)
+					->execute();
+
+				response()->json(
+					[
+						"message" => "Response deleted successfully"
+					], 200, true
+				);
+			});
+		});
+	});
+});
 
 app()->group('/v1', function(){
 	
@@ -54,15 +488,24 @@ app()->group('/v1', function(){
 		});
 
 		app()->post('/register', function(){
-			$user = auth()->register(request()->get(['name', 'email', 'password']), ['email']);
+			$request = request()->get(['name', 'email', 'password']);
 
-			if (!$user) {
-				response()->exit(auth()->errors());
+			$user = auth()->register($request, ['email']);
+
+			$errors = auth()->errors();
+
+			if ($errors) {
+				response()->exit($errors);
 			} else {
+				$newUser = auth()->login([
+					'email' => $request['email'],
+					'password' => $request['password']
+				]);
+
 				response ()->json([
 					'status' => 'success',
 					'scope' => 'newUser',
-					'data' => $user + ['projects' => []] + ['keys' => []]
+					'data' => $newUser + ['projects' => []] + ['keys' => []]
 				]);
 			}
 		});
@@ -432,6 +875,7 @@ app()->group('/v1', function(){
 			response()->json($projects);
 		});
 
+		// TODO: add validation here for field length
 		app()->post('updateFields', function(){
 			$request = request()->get(['projectId', 'fields']);
 
